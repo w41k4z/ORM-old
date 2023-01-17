@@ -4,9 +4,6 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-import java.sql.ResultSet;
-import java.sql.Statement;
-
 import java.util.ArrayList;
 
 import com.alain.orm.annotation.Column;
@@ -156,9 +153,39 @@ public class Relation extends DatabaseObject {
     }
 
     // VI- method
-    // private String createPrimaryKey(Connection connection) {
+    private int getSequenceFromDB(Connection connection) throws Exception {
+        boolean connectionWasMine = false;
+        if (connection.getConnection() == null) {
+            connectionWasMine = true;
+            connection = connection.defaultConnection();
+        }
 
-    // }
+        // the specified request up to the dbms used
+        String request = connection.sequenceGetter(this.getSequenceGetter());
+
+        Statement statement = connection.createStatement();
+        ResultSet result = statement.executeQuery(request);
+        result.next();
+        int seq = result.getInt(1);
+        statement.close();
+        if (connectionWasMine)
+            connection.close();
+        return seq;
+    }
+
+    private String createPrimaryKey(Connection connection) {
+        if (!this.hasCustomizedPrimaryKey())    // case for mysql auto_increment
+            return null;                        // or postgres serial
+        String primaryKey = this.getPrimaryKeyPrefix();
+        int sequence = this.getSequenceFromDB(connection);
+        int limit = this.getPrimaryKeyLength() -
+                this.getPrimaryKeyPrefix().length() -
+                String.valueOf(sequence).length();
+        for (int i = 0; i < limit; i++) {
+            primaryKey = primaryKey.concat("0");
+        }
+        return primaryKey.concat(String.valueOf(sequence));
+    }
 
     private boolean hasCustomizedPrimaryKey() {
         return this.getPrimaryKeyPrefix().length() > 0;

@@ -18,7 +18,7 @@ import com.alain.orm.utilities.Treatment;
 public class Request {
 
     private CRUDOperator crudOperator;
-    private DatabaseObject target;
+    private DatabaseObject databaseObject;
     private Class<?> type;
     private String specification = "";
     private Connection connection;
@@ -27,7 +27,7 @@ public class Request {
     public Request(CRUDOperator crudOperator, DatabaseObject target, Class<?> returnType,
             Connection connection) {
         this.setCrudOperator(crudOperator);
-        this.setTarget(target);
+        this.setdatabaseObject(target);
         this.setType(returnType);
         this.setConnection(connection);
     }
@@ -37,8 +37,8 @@ public class Request {
         this.crudOperator = crudOperator;
     }
 
-    private void setTarget(DatabaseObject target) {
-        this.target = target;
+    private void setdatabaseObject(DatabaseObject target) {
+        this.databaseObject = target;
     }
 
     private void setType(Class<?> type) {
@@ -58,8 +58,8 @@ public class Request {
         return this.crudOperator;
     }
 
-    private DatabaseObject getTarget() {
-        return this.target;
+    private DatabaseObject getDatabaseObject() {
+        return this.databaseObject;
     }
 
     private Class<?> getType() {
@@ -78,13 +78,13 @@ public class Request {
     //// request builder
     ////// INSERT request
     private String buildInsertRequest() throws Exception {
-        String[] columnName = this.getTarget().getColumn();
+        String[] columnName = this.getDatabaseObject().getColumn();
         String req = this.getCrudOperator() + " INTO ".concat(
-                this.getTarget().getTarget().concat("(".concat(String.join(",", columnName).concat(") VALUES("))));
+                this.getDatabaseObject().getTarget().concat("(".concat(String.join(",", columnName).concat(") VALUES("))));
 
         for (int i = 0; i < columnName.length; i++) {
-            Object data = this.getTarget().getClass()
-                    .getMethod(Treatment.toCamelCase("get", columnName[i])).invoke(this.getTarget());
+            Object data = this.getDatabaseObject().getClass()
+                    .getMethod(Treatment.toCamelCase("get", columnName[i])).invoke(this.getDatabaseObject());
             String toInsert;
             switch (data.getClass().getSimpleName()) {
                 case "String":
@@ -108,22 +108,22 @@ public class Request {
 
     ////// SELECT request
     private String buildSelectRequest() {
-        return this.getCrudOperator() + " ".concat(String.join(",", this.getTarget().getColumn()).concat(
+        return this.getCrudOperator() + " ".concat(String.join(",", this.getDatabaseObject().getColumn()).concat(
                 " FROM ".concat(
-                        this.getTarget().getTarget().concat(" " + this.getSpecification()))));
+                        this.getDatabaseObject().getTarget().concat(" " + this.getSpecification()))));
     }
 
     ////// UPDATE Request
     private String buildUpdateRequest() throws Exception {
-        String req = this.getCrudOperator() + " ".concat(this.getTarget().getTarget().concat(" SET "));
-        Relation table = Relation.class.cast(this.getTarget());
-        String[] columnName = this.getTarget().getColumn();
+        String req = this.getCrudOperator() + " ".concat(this.getDatabaseObject().getTarget().concat(" SET "));
+        Relation table = Relation.class.cast(this.getDatabaseObject());
+        String[] columnName = this.getDatabaseObject().getColumn();
         for (int i = 0; i < columnName.length; i++) {
             String separator = i == columnName.length - 1 ? " " : ", ";
-            Object data = this.getTarget().getClass()
+            Object data = this.getDatabaseObject().getClass()
                     .getMethod(Treatment.toCamelCase("get",
                             columnName[i]))
-                    .invoke(this.getTarget());
+                    .invoke(this.getDatabaseObject());
 
             if (data == null || columnName[i].equals(table.getPrimaryKeyField()))
                 continue;
@@ -151,7 +151,7 @@ public class Request {
 
     ////// DELETE request
     private String buildDeleteRequest() {
-        return this.getCrudOperator() + " FROM ".concat(this.getTarget().getTarget().concat(
+        return this.getCrudOperator() + " FROM ".concat(this.getDatabaseObject().getTarget().concat(
                 " " + this.getSpecification()));
     }
 
@@ -214,7 +214,7 @@ public class Request {
         }
         Statement statement = this.getConnection().createStatement();
         ResultSet result = statement.executeQuery(req);
-        String[] columnName = this.getTarget().getColumn();
+        String[] columnName = this.getDatabaseObject().getColumn();
         while (result.next()) {
             Object newObject = this.getType().getConstructor().newInstance();
             for (int i = 0; i < columnName.length; i++) {

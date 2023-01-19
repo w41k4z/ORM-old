@@ -19,12 +19,12 @@ public class Request {
 
     private CRUDOperator crudOperator;
     private DatabaseObject databaseObject;
-    private Class<?> type;
+    private Class<? extends DatabaseObject> type;
     private String specification = "";
     private Connection connection;
 
     // I- constructors
-    public Request(CRUDOperator crudOperator, DatabaseObject target, Class<?> returnType,
+    public Request(CRUDOperator crudOperator, DatabaseObject target, Class<? extends DatabaseObject> returnType,
             Connection connection) {
         this.setCrudOperator(crudOperator);
         this.setdatabaseObject(target);
@@ -41,7 +41,7 @@ public class Request {
         this.databaseObject = target;
     }
 
-    private void setType(Class<?> type) {
+    private void setType(Class<? extends DatabaseObject> type) {
         this.type = type;
     }
 
@@ -62,7 +62,7 @@ public class Request {
         return this.databaseObject;
     }
 
-    private Class<?> getType() {
+    private Class<? extends DatabaseObject> getType() {
         return this.type;
     }
 
@@ -78,7 +78,8 @@ public class Request {
     //// request builder
     ////// INSERT request
     private String buildInsertRequest() throws Exception {
-        String[] columnName = this.getDatabaseObject().getColumn();
+        Object returnType = this.getType().getConstructor().newInstance();
+        String[] columnName = (String[]) returnType.getClass().getMethod("getColumn").invoke(returnType);
         String req = this.getCrudOperator() + " INTO ".concat(
                 this.getDatabaseObject().getTarget().concat("(".concat(String.join(",", columnName).concat(") VALUES("))));
 
@@ -107,10 +108,20 @@ public class Request {
     }
 
     ////// SELECT request
-    private String buildSelectRequest() {
-        return this.getCrudOperator() + " ".concat(String.join(",", this.getDatabaseObject().getColumn()).concat(
-                " FROM ".concat(
-                        this.getDatabaseObject().getTarget().concat(" " + this.getSpecification()))));
+    private String buildSelectRequest() throws Exception { 
+        switch(this.getDatabaseObject().getClass().getSimpleName()) {
+            case "Function":
+                return this.getConnection().functionGetter(
+                this.getDatabaseObject()
+                        .getTarget());
+
+            default:
+                Object returnType = this.getType().getConstructor().newInstance();
+                String[] columnName = (String[]) returnType.getClass().getMethod("getColumn").invoke(returnType);
+                return this.getCrudOperator() + " ".concat(String.join(",", columnName).concat(
+                        " FROM ".concat(
+                                this.getDatabaseObject().getTarget().concat(" " + this.getSpecification()))));
+        }
     }
 
     ////// UPDATE Request

@@ -11,5 +11,5 @@ public @interface PrimaryKey {
     Column column();
     String prefix() default ""; // for primaryKey maker 
     int length() default 0; // for primaryKey maker
-    String sequenceGetter() default ""; // for primaryKey maker
+    String sequence() default ""; // for primaryKey maker
 }

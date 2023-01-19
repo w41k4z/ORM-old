@@ -11,6 +11,7 @@ import com.alain.orm.annotation.DatabaseTable;
 import com.alain.orm.annotation.PrimaryKey;
 import com.alain.orm.database.connection.Connection;
 import com.alain.orm.database.object.DatabaseObject;
+import com.alain.orm.database.object.sequence.Sequence;
 import com.alain.orm.enumeration.CRUDOperator;
 import com.alain.orm.exception.InvalidColumnCountException;
 import com.alain.orm.exception.MissingAnnotationException;
@@ -21,10 +22,9 @@ import com.alain.orm.utilities.Treatment;
 
 public class Relation extends DatabaseObject {
 
-    // I- constructors
-    public Relation() throws MissingAnnotationException, InvalidColumnCountException, PrimaryKeyCountException,
-            MissingSetterException {
-        this.checkClassValidity();
+    // I- constructor
+    public Relation() throws Exception {
+        super();
     }
 
     // II- setters
@@ -40,6 +40,10 @@ public class Relation extends DatabaseObject {
 
     private int getPrimaryKeyLength() {
         return this.getClass().getAnnotation(PrimaryKey.class).length();
+    }
+
+    private String getPrimaryKeySequence() {
+        return this.getClass().getAnnotation(PrimaryKey.class).sequence();
     }
 
     private Method getPrimaryKeySetter() throws NoSuchMethodException, SecurityException {
@@ -100,7 +104,7 @@ public class Relation extends DatabaseObject {
 
     // IV- CRUD
     public int create(Connection connection) throws Exception {
-        //if(this.hasCustomizedPrimaryKey())  this.setPrimaryKey(connection);
+        this.setPrimaryKey(this.createPrimaryKey(connection));
         Request request = new Request(CRUDOperator.DELETE, this, this.getClass(), connection);
         return Integer.parseInt(request.executeRequest().toString());
     }
@@ -152,32 +156,12 @@ public class Relation extends DatabaseObject {
         return Integer.parseInt(request.executeRequest().toString());
     }
 
-    // VI- method
-    private int getSequenceFromDB(Connection connection) throws Exception {
-        boolean connectionWasMine = false;
-        if (connection.getConnection() == null) {
-            connectionWasMine = true;
-            connection = connection.defaultConnection();
-        }
-
-        // the specified request up to the dbms used
-        String request = connection.sequenceGetter(this.getSequenceGetter());
-
-        Statement statement = connection.createStatement();
-        ResultSet result = statement.executeQuery(request);
-        result.next();
-        int seq = result.getInt(1);
-        statement.close();
-        if (connectionWasMine)
-            connection.close();
-        return seq;
-    }
-
-    private String createPrimaryKey(Connection connection) {
+    // V- method
+    private String createPrimaryKey(Connection connection) throws Exception {
         if (!this.hasCustomizedPrimaryKey())    // case for mysql auto_increment
             return null;                        // or postgres serial
         String primaryKey = this.getPrimaryKeyPrefix();
-        int sequence = this.getSequenceFromDB(connection);
+        int sequence = new Sequence(this.getPrimaryKeySequence()).get(connection);
         int limit = this.getPrimaryKeyLength() -
                 this.getPrimaryKeyPrefix().length() -
                 String.valueOf(sequence).length();
@@ -208,17 +192,16 @@ public class Relation extends DatabaseObject {
             throw new InvalidColumnCountException();
     }
 
-    private void checkSetterValidity() throws MissingSetterException {
-        for (Field field : this.getClass().getDeclaredFields()) {
-            if (field.isAnnotationPresent(Column.class) || field.isAnnotationPresent(PrimaryKey.class)) {
-                try {
-                    Method setter = this.getClass().getDeclaredMethod(Treatment.toCamelCase("set", field.getName()),
-                            String.class);
-                } catch (NoSuchMethodException e) {
-                    throw new MissingSetterException();
-                } catch (SecurityException e) {
-                    e.printStackTrace();
-                }
+    private void checkSetterValidity() throws MissingSetterException, NoSuchFieldException, SecurityException {
+        for (String fieldName : this.getColumn()) {
+            Field field = this.getClass().getField(fieldName);
+            try {
+                this.getClass().getDeclaredMethod(Treatment.toCamelCase("set", field.getName()),
+                    String.class);
+            } catch (NoSuchMethodException e) {
+                throw new MissingSetterException();
+            } catch (SecurityException e) {
+                e.printStackTrace();
             }
         }
     }
@@ -234,9 +217,9 @@ public class Relation extends DatabaseObject {
             throw new PrimaryKeyCountException();
     }
 
-    private void checkClassValidity()
+    protected void checkClassValidity()
             throws MissingAnnotationException, InvalidColumnCountException, PrimaryKeyCountException,
-            MissingSetterException {
+            MissingSetterException, NoSuchFieldException, SecurityException {
         this.checkTableAnnotation();
         this.checkColumnValidity();
         this.checkSetterValidity();

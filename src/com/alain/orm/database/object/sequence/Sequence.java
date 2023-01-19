@@ -3,7 +3,7 @@ package com.alain.orm.database.object.sequence;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
-import com.alain.orm.database.connection.Connection;
+import com.alain.orm.database.connection.DatabaseConnection;
 
 public class Sequence {
     
@@ -25,7 +25,7 @@ public class Sequence {
     }
 
     // IV- method
-    public int get(Connection connection) throws Exception {
+    public int get(DatabaseConnection connection) throws Exception {
         boolean connectionWasMine = false;
         if (connection.getConnection() == null) {
             connectionWasMine = true;

@@ -4,7 +4,7 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 
-public abstract class Connection {
+public abstract class DatabaseConnection {
 
     protected java.sql.Connection connection;
     protected String url;
@@ -17,9 +17,9 @@ public abstract class Connection {
     // constructors
     
     //// for null connection
-    public Connection() {}
+    public DatabaseConnection() {}
 
-    public Connection(String url, String user, String password) throws SQLException {
+    public DatabaseConnection(String url, String user, String password) throws SQLException {
         this.setUrl(url);
         this.setUser(user);
         this.setPassword(password);
@@ -55,7 +55,7 @@ public abstract class Connection {
 
 
     // methods
-    public abstract Connection defaultConnection() throws SQLException;
+    public abstract DatabaseConnection defaultConnection() throws SQLException;
     
     public abstract String dateFormat(String date);
     

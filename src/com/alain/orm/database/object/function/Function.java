@@ -3,10 +3,11 @@ package com.alain.orm.database.object.function;
 import java.lang.reflect.InvocationTargetException;
 
 import com.alain.orm.annotation.DatabaseFunction;
-import com.alain.orm.database.connection.Connection;
+import com.alain.orm.database.connection.DatabaseConnection;
 import com.alain.orm.database.object.DatabaseObject;
 import com.alain.orm.database.object.relation.Relation;
 import com.alain.orm.exception.MissingAnnotationException;
+import com.alain.orm.utilities.ModelField;
 
 public abstract class Function extends DatabaseObject {
     
@@ -51,13 +52,13 @@ public abstract class Function extends DatabaseObject {
     }
 
     @Override
-    public String[] getColumn() throws IllegalAccessException, InvocationTargetException, NoSuchMethodException,
+    public ModelField[] getColumn() throws IllegalAccessException, InvocationTargetException, NoSuchMethodException,
             SecurityException, InstantiationException, IllegalArgumentException {
-        return (String[]) this.getType().getMethod("getColumn").invoke(this.getType().getConstructor().newInstance());
+        return (ModelField[]) this.getType().getMethod("getColumn").invoke(this.getType().getConstructor().newInstance());
     }
 
     // IV- fetch
-    public abstract Relation[] findAll(Connection connection);
+    public abstract Relation[] findAll(DatabaseConnection connection);
 
     // V- validation
     private void checkTableAnnotation() throws MissingAnnotationException {

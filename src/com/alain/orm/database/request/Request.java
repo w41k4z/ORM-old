@@ -8,11 +8,12 @@ import java.sql.Statement;
 
 import java.util.ArrayList;
 
-import com.alain.orm.database.connection.Connection;
+import com.alain.orm.database.connection.DatabaseConnection;
 import com.alain.orm.database.object.DatabaseObject;
 import com.alain.orm.database.object.relation.Relation;
 import com.alain.orm.enumeration.CRUDOperator;
 import com.alain.orm.exception.InvalidRequestException;
+import com.alain.orm.utilities.ModelField;
 import com.alain.orm.utilities.Treatment;
 
 public class Request {
@@ -21,11 +22,11 @@ public class Request {
     private DatabaseObject databaseObject;
     private Class<? extends DatabaseObject> type;
     private String specification = "";
-    private Connection connection;
+    private DatabaseConnection connection;
 
     // I- constructors
     public Request(CRUDOperator crudOperator, DatabaseObject target, Class<? extends DatabaseObject> returnType,
-            Connection connection) {
+            DatabaseConnection connection) {
         this.setCrudOperator(crudOperator);
         this.setdatabaseObject(target);
         this.setType(returnType);
@@ -49,7 +50,7 @@ public class Request {
         this.specification = spec;
     }
 
-    private void setConnection(Connection connection) {
+    private void setConnection(DatabaseConnection connection) {
         this.connection = connection;
     }
 
@@ -70,7 +71,7 @@ public class Request {
         return this.specification;
     }
 
-    private Connection getConnection() {
+    private DatabaseConnection getConnection() {
         return this.connection;
     }
 
@@ -79,13 +80,18 @@ public class Request {
     ////// INSERT request
     private String buildInsertRequest() throws Exception {
         Object returnType = this.getType().getConstructor().newInstance();
-        String[] columnName = (String[]) returnType.getClass().getMethod("getColumn").invoke(returnType);
+        ModelField[] columnName = (ModelField[]) returnType.getClass().getMethod("getColumn").invoke(returnType);
+        String[] col = new String[columnName.length];
+        int index = 0;
+        for (ModelField modelField : columnName) {
+            col[index++] = modelField.getName();
+        }
         String req = this.getCrudOperator() + " INTO ".concat(
-                this.getDatabaseObject().getTarget().concat("(".concat(String.join(",", columnName).concat(") VALUES("))));
+                this.getDatabaseObject().getTarget().concat("(".concat(String.join(",", col).concat(") VALUES("))));
 
         for (int i = 0; i < columnName.length; i++) {
             Object data = this.getDatabaseObject().getClass()
-                    .getMethod(Treatment.toCamelCase("get", columnName[i])).invoke(this.getDatabaseObject());
+                    .getMethod(Treatment.toCamelCase("get", columnName[i].getOriginalName())).invoke(this.getDatabaseObject());
             String toInsert;
             switch (data.getClass().getSimpleName()) {
                 case "String":
@@ -117,7 +123,12 @@ public class Request {
 
             default:
                 Object returnType = this.getType().getConstructor().newInstance();
-                String[] columnName = (String[]) returnType.getClass().getMethod("getColumn").invoke(returnType);
+                ModelField[] columnField = (ModelField[]) returnType.getClass().getMethod("getColumn").invoke(returnType);
+                String[] columnName = new String[columnField.length];
+                int index = 0;
+                for (ModelField modelField : columnField) {
+                    columnName[index++] = modelField.getName();
+                }
                 return this.getCrudOperator() + " ".concat(String.join(",", columnName).concat(
                         " FROM ".concat(
                                 this.getDatabaseObject().getTarget().concat(" " + this.getSpecification()))));
@@ -127,16 +138,17 @@ public class Request {
     ////// UPDATE Request
     private String buildUpdateRequest() throws Exception {
         String req = this.getCrudOperator() + " ".concat(this.getDatabaseObject().getTarget().concat(" SET "));
-        Relation table = Relation.class.cast(this.getDatabaseObject());
-        String[] columnName = this.getDatabaseObject().getColumn();
+        Relation table = Relation.class.cast(this.getType().getConstructor().newInstance());
+        Object returnType = this.getType().getConstructor().newInstance();
+        ModelField[] columnName = (ModelField[]) returnType.getClass().getMethod("getColumn").invoke(returnType);
         for (int i = 0; i < columnName.length; i++) {
             String separator = i == columnName.length - 1 ? " " : ", ";
             Object data = this.getDatabaseObject().getClass()
                     .getMethod(Treatment.toCamelCase("get",
-                            columnName[i]))
+                            columnName[i].getOriginalName()))
                     .invoke(this.getDatabaseObject());
 
-            if (data == null || columnName[i].equals(table.getPrimaryKeyField()))
+            if (data == null || columnName[i].getName().equals(table.getPrimaryKeyField().getName()))
                 continue;
 
             String toInsert;
@@ -154,7 +166,7 @@ public class Request {
                     toInsert = data.toString();
                     break;
             }
-            req = req.concat(columnName[i] + "=" + toInsert + separator);
+            req = req.concat(columnName[i].getName() + "=" + toInsert + separator);
         }
 
         return req.concat(this.getSpecification());
@@ -225,15 +237,15 @@ public class Request {
         }
         Statement statement = this.getConnection().createStatement();
         ResultSet result = statement.executeQuery(req);
-        String[] columnName = this.getDatabaseObject().getColumn();
+        ModelField[] columnName = this.getDatabaseObject().getColumn();
         while (result.next()) {
             Object newObject = this.getType().getConstructor().newInstance();
             for (int i = 0; i < columnName.length; i++) {
-                Object data = result.getObject(columnName[i]);
+                Object data = result.getObject(columnName[i].getName());
                 Method method = newObject
                         .getClass()
                         .getMethod(
-                                Treatment.toCamelCase("set", columnName[i]),
+                                Treatment.toCamelCase("set", columnName[i].getOriginalName()),
                                 String.class);
                 method.invoke(
                         newObject,

@@ -1,5 +1,6 @@
 package com.alain.orm.database.object.relation;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -9,7 +10,7 @@ import java.util.ArrayList;
 import com.alain.orm.annotation.Column;
 import com.alain.orm.annotation.DatabaseTable;
 import com.alain.orm.annotation.PrimaryKey;
-import com.alain.orm.database.connection.Connection;
+import com.alain.orm.database.connection.DatabaseConnection;
 import com.alain.orm.database.object.DatabaseObject;
 import com.alain.orm.database.object.sequence.Sequence;
 import com.alain.orm.enumeration.CRUDOperator;
@@ -18,9 +19,10 @@ import com.alain.orm.exception.MissingAnnotationException;
 import com.alain.orm.exception.MissingSetterException;
 import com.alain.orm.exception.PrimaryKeyCountException;
 import com.alain.orm.database.request.Request;
+import com.alain.orm.utilities.ModelField;
 import com.alain.orm.utilities.Treatment;
 
-public class Relation extends DatabaseObject {
+public class Relation<T> extends DatabaseObject {
 
     // I- constructor
     public Relation() throws Exception {
@@ -28,22 +30,38 @@ public class Relation extends DatabaseObject {
     }
 
     // II- setters
-    private void setPrimaryKey(String pk) throws IllegalAccessException, IllegalArgumentException, InvocationTargetException, NoSuchMethodException, SecurityException {
-        this.getPrimaryKeySetter().invoke(this, pk);
+    private void setPrimaryKey(String pk) throws IllegalAccessException, IllegalArgumentException,
+            InvocationTargetException, NoSuchMethodException, SecurityException {
+        if(this.hasPrimaryKey()) this.getPrimaryKeySetter().invoke(this, pk);
     }
 
     // III- getters
     //// primaryKey
     private String getPrimaryKeyPrefix() {
-        return this.getClass().getAnnotation(PrimaryKey.class).prefix();
+        for (Field field : this.getClass().getDeclaredFields()) {
+            if (field.isAnnotationPresent(PrimaryKey.class)) {
+                return field.getAnnotation(PrimaryKey.class).prefix();
+            }
+        }
+        return null;
     }
 
     private int getPrimaryKeyLength() {
-        return this.getClass().getAnnotation(PrimaryKey.class).length();
+        for (Field field : this.getClass().getDeclaredFields()) {
+            if (field.isAnnotationPresent(PrimaryKey.class)) {
+                return field.getAnnotation(PrimaryKey.class).length();
+            }
+        }
+        return 0;
     }
 
     private String getPrimaryKeySequence() {
-        return this.getClass().getAnnotation(PrimaryKey.class).sequence();
+        for (Field field : this.getClass().getDeclaredFields()) {
+            if (field.isAnnotationPresent(PrimaryKey.class)) {
+                return field.getAnnotation(PrimaryKey.class).sequence();
+            }
+        }
+        return null;
     }
 
     private Method getPrimaryKeySetter() throws NoSuchMethodException, SecurityException {
@@ -55,10 +73,14 @@ public class Relation extends DatabaseObject {
         return null;
     }
 
-    public String getPrimaryKeyField() {
+    public ModelField getPrimaryKeyField() {
         for (Field field : this.getClass().getDeclaredFields()) {
             if (field.isAnnotationPresent(PrimaryKey.class)) {
-                return field.getAnnotation(PrimaryKey.class).column().name();
+                String name = field.getAnnotation(PrimaryKey.class).column().name().length() > 0
+                        ? field.getAnnotation(PrimaryKey.class).column().name()
+                        : field.getName();
+                String originalName = field.getName();
+                return new ModelField(name, originalName);
             }
         }
         return null;
@@ -82,13 +104,17 @@ public class Relation extends DatabaseObject {
     }
 
     @Override
-    public String[] getColumn() {
-        String[] columns = new String[this.getColumnCount()];
+    public ModelField[] getColumn() {
+        ModelField[] columns = new ModelField[this.getColumnCount()];
         int index = 0;
-        columns[index++] = this.getPrimaryKeyField();
+        if(this.hasPrimaryKey()) columns[index++] = this.getPrimaryKeyField();
         for (Field field : this.getClass().getDeclaredFields()) {
             if (field.isAnnotationPresent(Column.class)) {
-                columns[index++] = field.getAnnotation(Column.class).name();
+                String name = field.getAnnotation(Column.class).name().length() > 0
+                        ? field.getAnnotation(Column.class).name()
+                        : field.getName();
+                String originalName = field.getName();
+                columns[index++] = new ModelField(name, originalName);
             }
         }
         return columns;
@@ -103,63 +129,63 @@ public class Relation extends DatabaseObject {
     }
 
     // IV- CRUD
-    public int create(Connection connection) throws Exception {
+    public int create(DatabaseConnection connection) throws Exception {
         this.setPrimaryKey(this.createPrimaryKey(connection));
-        Request request = new Request(CRUDOperator.DELETE, this, this.getClass(), connection);
+        Request request = new Request(CRUDOperator.INSERT, this, this.getClass(), connection);
         return Integer.parseInt(request.executeRequest().toString());
     }
 
     @SuppressWarnings("unchecked")
-    public Relation[] findAll(Connection connection) throws Exception {
-        Request request = new Request(CRUDOperator.DELETE, this, this.getClass(), connection);
+    public T[] findAll(DatabaseConnection connection) throws Exception {
+        Request request = new Request(CRUDOperator.SELECT, this, this.getClass(), connection);
         ArrayList<Object> result = (ArrayList<Object>) request.executeRequest();
-        Relation[] ans = new Relation[result.size()];
+        T[] ans = (T[]) Array.newInstance(this.getClass(), result.size());
         for (int i = 0; i < ans.length; i++) {
-            ans[i] = Relation.class.cast(result.get(i));
+            ans[i] = (T) Relation.class.cast(result.get(i));
         }
         return ans;
     }
 
     @SuppressWarnings("unchecked")
-    public Relation[] findAll(Connection connection, String spec) throws Exception {
-        Request request = new Request(CRUDOperator.DELETE, this, this.getClass(), connection);
+    public T[] findAll(DatabaseConnection connection, String spec) throws Exception {
+        Request request = new Request(CRUDOperator.SELECT, this, this.getClass(), connection);
         request.setSpecification(spec);
         ArrayList<Object> result = (ArrayList<Object>) request.executeRequest();
-        Relation[] ans = new Relation[result.size()];
+        T[] ans = (T[]) Array.newInstance(this.getClass(), result.size());
         for (int i = 0; i < ans.length; i++) {
-            ans[i] = Relation.class.cast(result.get(i));
+            ans[i] = (T) Relation.class.cast(result.get(i));
         }
         return ans;
     }
 
-    public int update(Connection connection) throws Exception {
-        Request request = new Request(CRUDOperator.DELETE, this, this.getClass(), connection);
+    public int update(DatabaseConnection connection) throws Exception {
+        Request request = new Request(CRUDOperator.UPDATE, this, this.getClass(), connection);
         request.setSpecification("WHERE " + this.getPrimaryKeyField() + " = '" + this.getPrimaryKey() + "'");
         return Integer.parseInt(request.executeRequest().toString());
     }
 
-    public int update(Connection connection, String spec) throws Exception {
-        Request request = new Request(CRUDOperator.DELETE, this, this.getClass(), connection);
+    public int update(DatabaseConnection connection, String spec) throws Exception {
+        Request request = new Request(CRUDOperator.UPDATE, this, this.getClass(), connection);
         request.setSpecification(spec);
         return Integer.parseInt(request.executeRequest().toString());
     }
 
-    public int delete(Connection connection) throws Exception {
+    public int delete(DatabaseConnection connection) throws Exception {
         Request request = new Request(CRUDOperator.DELETE, this, this.getClass(), connection);
-        request.setSpecification("WHERE " + this.getPrimaryKeyField() + " = '" + this.getPrimaryKey() + "'");
+        request.setSpecification("WHERE " + this.getPrimaryKeyField().getName() + " = '" + this.getPrimaryKey() + "'");
         return Integer.parseInt(request.executeRequest().toString());
     }
 
-    public int delete(Connection connection, String spec) throws Exception {
+    public int delete(DatabaseConnection connection, String spec) throws Exception {
         Request request = new Request(CRUDOperator.DELETE, this, this.getClass(), connection);
         request.setSpecification(spec);
         return Integer.parseInt(request.executeRequest().toString());
     }
 
     // V- method
-    private String createPrimaryKey(Connection connection) throws Exception {
-        if (!this.hasCustomizedPrimaryKey())    // case for mysql auto_increment
-            return null;                        // or postgres serial
+    private String createPrimaryKey(DatabaseConnection connection) throws Exception {
+        if (!this.hasCustomizedPrimaryKey()) // case for mysql auto_increment
+            return null; // or postgres serial
         String primaryKey = this.getPrimaryKeyPrefix();
         int sequence = new Sequence(this.getPrimaryKeySequence()).get(connection);
         int limit = this.getPrimaryKeyLength() -
@@ -169,6 +195,10 @@ public class Relation extends DatabaseObject {
             primaryKey = primaryKey.concat("0");
         }
         return primaryKey.concat(String.valueOf(sequence));
+    }
+
+    private boolean hasPrimaryKey() {
+        return this.getPrimaryKeyField() == null ? false : true;
     }
 
     private boolean hasCustomizedPrimaryKey() {
@@ -193,16 +223,15 @@ public class Relation extends DatabaseObject {
     }
 
     private void checkSetterValidity() throws MissingSetterException, NoSuchFieldException, SecurityException {
-        for (String fieldName : this.getColumn()) {
-            Field field = this.getClass().getField(fieldName);
+        for (ModelField field : this.getColumn()) {
             try {
-                this.getClass().getDeclaredMethod(Treatment.toCamelCase("set", field.getName()),
-                    String.class);
+                this.getClass().getDeclaredMethod(Treatment.toCamelCase("set", field.getOriginalName()),
+                        String.class);
             } catch (NoSuchMethodException e) {
                 throw new MissingSetterException();
             } catch (SecurityException e) {
                 e.printStackTrace();
-            }
+            }   
         }
     }
 

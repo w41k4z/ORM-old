@@ -1,5 +1,7 @@
 package com.alain.orm.database.object;
 
+import com.alain.orm.utilities.ModelField;
+
 public abstract class DatabaseObject {
     
     // I- constructor
@@ -10,7 +12,7 @@ public abstract class DatabaseObject {
     // II- getter
     public abstract String getTarget();
 
-    public abstract String[] getColumn() throws Exception;
+    public abstract ModelField[] getColumn() throws Exception;
 
     protected abstract void checkClassValidity() throws Exception;
 }

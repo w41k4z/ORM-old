@@ -8,9 +8,10 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 
 import com.alain.orm.annotation.Column;
-import com.alain.orm.annotation.DatabaseTable;
+import com.alain.orm.annotation.Table;
 import com.alain.orm.annotation.PrimaryKey;
 import com.alain.orm.database.connection.DatabaseConnection;
+import com.alain.orm.database.connection.PostgresConnection;
 import com.alain.orm.database.object.DatabaseObject;
 import com.alain.orm.database.object.sequence.Sequence;
 import com.alain.orm.enumeration.CRUDOperator;
@@ -19,7 +20,6 @@ import com.alain.orm.exception.MissingAnnotationException;
 import com.alain.orm.exception.MissingSetterException;
 import com.alain.orm.exception.PrimaryKeyCountException;
 import com.alain.orm.database.request.Request;
-import com.alain.orm.utilities.ModelField;
 import com.alain.orm.utilities.Treatment;
 
 public class Relation<T> extends DatabaseObject {
@@ -100,7 +100,7 @@ public class Relation<T> extends DatabaseObject {
 
     //// column
     private int getColumnCount() {
-        return this.getClass().getAnnotation(DatabaseTable.class).columnCount();
+        return this.getClass().getAnnotation(Table.class).columnCount();
     }
 
     @Override
@@ -123,8 +123,8 @@ public class Relation<T> extends DatabaseObject {
     //// target name
     @Override
     public String getTarget() {
-        return this.getClass().getAnnotation(DatabaseTable.class).name().length() > 0
-                ? this.getClass().getAnnotation(DatabaseTable.class).name()
+        return this.getClass().getAnnotation(Table.class).name().length() > 0
+                ? this.getClass().getAnnotation(Table.class).name()
                 : this.getClass().getSimpleName();
     }
 
@@ -160,7 +160,7 @@ public class Relation<T> extends DatabaseObject {
 
     public int update(DatabaseConnection connection) throws Exception {
         Request request = new Request(CRUDOperator.UPDATE, this, this.getClass(), connection);
-        request.setSpecification("WHERE " + this.getPrimaryKeyField() + " = '" + this.getPrimaryKey() + "'");
+        request.setSpecification("WHERE " + this.getPrimaryKeyField().getName() + " = '" + this.getPrimaryKey() + "'");
         return Integer.parseInt(request.executeRequest().toString());
     }
 
@@ -185,7 +185,7 @@ public class Relation<T> extends DatabaseObject {
     // V- method
     private String createPrimaryKey(DatabaseConnection connection) throws Exception {
         if (!this.hasCustomizedPrimaryKey()) // case for mysql auto_increment
-            return null; // or postgres serial
+            return connection instanceof PostgresConnection ? "DEFAULT" : "NULL";   // or for postgres serial
         String primaryKey = this.getPrimaryKeyPrefix();
         int sequence = new Sequence(this.getPrimaryKeySequence()).get(connection);
         int limit = this.getPrimaryKeyLength() -
@@ -207,7 +207,7 @@ public class Relation<T> extends DatabaseObject {
 
     // VII- validation
     private void checkTableAnnotation() throws MissingAnnotationException {
-        if (!this.getClass().isAnnotationPresent(DatabaseTable.class))
+        if (!this.getClass().isAnnotationPresent(Table.class))
             throw new MissingAnnotationException();
     }
 

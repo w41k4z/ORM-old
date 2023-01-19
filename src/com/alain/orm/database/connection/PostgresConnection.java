@@ -29,7 +29,7 @@ public class PostgresConnection extends DatabaseConnection {
 
     @Override
     public String functionGetter(String function) {
-        return "SELECT " + function;
+        return "SELECT * FROM " + function;
     }
     
 }

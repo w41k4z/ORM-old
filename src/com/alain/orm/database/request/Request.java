@@ -13,7 +13,7 @@ import com.alain.orm.database.object.DatabaseObject;
 import com.alain.orm.database.object.relation.Relation;
 import com.alain.orm.enumeration.CRUDOperator;
 import com.alain.orm.exception.InvalidRequestException;
-import com.alain.orm.utilities.ModelField;
+import com.alain.orm.database.object.relation.ModelField;
 import com.alain.orm.utilities.Treatment;
 
 public class Request {
@@ -28,7 +28,7 @@ public class Request {
     public Request(CRUDOperator crudOperator, DatabaseObject target, Class<? extends DatabaseObject> returnType,
             DatabaseConnection connection) {
         this.setCrudOperator(crudOperator);
-        this.setdatabaseObject(target);
+        this.setDatabaseObject(target);
         this.setType(returnType);
         this.setConnection(connection);
     }
@@ -38,7 +38,7 @@ public class Request {
         this.crudOperator = crudOperator;
     }
 
-    private void setdatabaseObject(DatabaseObject target) {
+    private void setDatabaseObject(DatabaseObject target) {
         this.databaseObject = target;
     }
 
@@ -138,11 +138,10 @@ public class Request {
     ////// UPDATE Request
     private String buildUpdateRequest() throws Exception {
         String req = this.getCrudOperator() + " ".concat(this.getDatabaseObject().getTarget().concat(" SET "));
-        Relation table = Relation.class.cast(this.getType().getConstructor().newInstance());
+        Relation<?> table = Relation.class.cast(this.getType().getConstructor().newInstance());
         Object returnType = this.getType().getConstructor().newInstance();
         ModelField[] columnName = (ModelField[]) returnType.getClass().getMethod("getColumn").invoke(returnType);
-        for (int i = 0; i < columnName.length; i++) {
-            String separator = i == columnName.length - 1 ? " " : ", ";
+        for (int i = 0, index = 0; i < columnName.length; i++) {
             Object data = this.getDatabaseObject().getClass()
                     .getMethod(Treatment.toCamelCase("get",
                             columnName[i].getOriginalName()))
@@ -151,6 +150,7 @@ public class Request {
             if (data == null || columnName[i].getName().equals(table.getPrimaryKeyField().getName()))
                 continue;
 
+            req = req.concat(index == 0 ? "" : ", ");
             String toInsert;
             switch (data.getClass().getSimpleName()) {
                 case "String":
@@ -166,10 +166,11 @@ public class Request {
                     toInsert = data.toString();
                     break;
             }
-            req = req.concat(columnName[i].getName() + "=" + toInsert + separator);
+            req = req.concat(columnName[i].getName() + "=" + toInsert);
+            index++;
         }
 
-        return req.concat(this.getSpecification());
+        return req.concat(" " + this.getSpecification());
     }
 
     ////// DELETE request

@@ -1,6 +1,6 @@
 package com.alain.orm.database.object;
 
-import com.alain.orm.utilities.ModelField;
+import com.alain.orm.database.object.relation.ModelField;
 
 public abstract class DatabaseObject {
     

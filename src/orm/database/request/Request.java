@@ -1,7 +1,5 @@
 package orm.database.request;
 
-import java.lang.reflect.Method;
-
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -97,6 +95,9 @@ public class Request {
                 case "String":
                     toInsert = data == null ? "NULL" : "'" + data.toString() + "'";
                     break;
+                case "Time":
+                    toInsert = data == null ? "NULL" : "'" + data.toString() + "'";
+                    break;
                 case "Date":
                     toInsert = data == null ? "NULL" : this.getConnection().dateFormat(data.toString());
                     break;
@@ -154,6 +155,9 @@ public class Request {
             String toInsert;
             switch (data.getClass().getSimpleName()) {
                 case "String":
+                    toInsert = "'" + data.toString() + "'";
+                    break;
+                case "Time":
                     toInsert = "'" + data.toString() + "'";
                     break;
                 case "Date":
@@ -243,14 +247,7 @@ public class Request {
             Object newObject = this.getType().getConstructor().newInstance();
             for (int i = 0; i < columnName.length; i++) {
                 Object data = result.getObject(columnName[i].getName());
-                Method method = newObject
-                        .getClass()
-                        .getMethod(
-                                Treatment.toCamelCase("set", columnName[i].getOriginalName()),
-                                String.class);
-                method.invoke(
-                        newObject,
-                        data == null ? null : data.toString());
+                Treatment.setObjectFieldValue(newObject, data, columnName[i]);
             }
             results.add(newObject);
         }

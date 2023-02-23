@@ -80,7 +80,7 @@ public class Relation<T> extends DatabaseObject {
                         ? field.getAnnotation(PrimaryKey.class).column().name()
                         : field.getName();
                 String originalName = field.getName();
-                return new ModelField(name, originalName);
+                return new ModelField(field.getType(), name, originalName);
             }
         }
         return null;
@@ -114,7 +114,7 @@ public class Relation<T> extends DatabaseObject {
                         ? field.getAnnotation(Column.class).name()
                         : field.getName();
                 String originalName = field.getName();
-                columns[index++] = new ModelField(name, originalName);
+                columns[index++] = new ModelField(field.getType(), name, originalName);
             }
         }
         return columns;
@@ -222,19 +222,6 @@ public class Relation<T> extends DatabaseObject {
             throw new InvalidColumnCountException();
     }
 
-    private void checkSetterValidity() throws MissingSetterException, NoSuchFieldException, SecurityException {
-        for (ModelField field : this.getColumn()) {
-            try {
-                this.getClass().getDeclaredMethod(Treatment.toCamelCase("set", field.getOriginalName()),
-                        String.class);
-            } catch (NoSuchMethodException e) {
-                throw new MissingSetterException();
-            } catch (SecurityException e) {
-                e.printStackTrace();
-            }   
-        }
-    }
-
     private void checkPrimaryKeyValidity() throws PrimaryKeyCountException {
         int count = 0;
         for (Field field : this.getClass().getDeclaredFields()) {
@@ -251,7 +238,6 @@ public class Relation<T> extends DatabaseObject {
             MissingSetterException, NoSuchFieldException, SecurityException {
         this.checkTableAnnotation();
         this.checkColumnValidity();
-        this.checkSetterValidity();
         this.checkPrimaryKeyValidity();
     }
 }

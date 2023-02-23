@@ -56,7 +56,6 @@ public class Function<T extends Relation<?>> extends DatabaseObject {
         String[] paramStrVer = new String[this.getParameters().length];
         int index = 0;
         for (Object parameter : this.getParameters()) {
-            System.out.println(parameter.toString());
             paramStrVer[index++] = parameter instanceof String || parameter instanceof java.sql.Date ? "'".concat(parameter.toString()).concat("'") : parameter.toString();
         }
         return this.getFunctionName().concat("(" + String.join(",", paramStrVer) + ")");
@@ -95,7 +94,5 @@ public class Function<T extends Relation<?>> extends DatabaseObject {
 
     // V- validation
     @Override
-    protected void checkClassValidity() throws MissingAnnotationException {
-        return;
-    }
+    protected void checkClassValidity() throws MissingAnnotationException {}
 }

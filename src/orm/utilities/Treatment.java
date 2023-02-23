@@ -1,8 +1,12 @@
 package orm.utilities;
 
+import java.lang.reflect.Method;
 import java.sql.Date;
+import java.sql.Time;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+
+import orm.database.object.relation.ModelField;
 
 public class Treatment {
 
@@ -40,4 +44,39 @@ public class Treatment {
     return null;
   }
 
+  public static void setObjectFieldValue(Object object, Object data, ModelField modelField) throws Exception {
+    
+    Object castedData;
+    Method setter = object.getClass().getMethod(toCamelCase("set", modelField.getOriginalName()),
+        modelField.getClassType());
+
+    switch (modelField.getClassType().getSimpleName()) {
+      case "Date":
+        castedData = data == null ? null : Date.valueOf(data.toString());
+        break;
+      
+      case "Timestamp":
+        castedData = data == null ? null : Timestamp.valueOf(data.toString());
+        break;
+      
+      case "Time":
+        castedData = data == null ? null : Time.valueOf(data.toString());
+        break;
+      
+      case "Integer":
+        castedData = data == null ? null : Integer.parseInt(data.toString());
+        break;
+      
+      case "Double":
+        castedData = data == null ? null : Double.parseDouble(data.toString());
+        break;
+      
+      default:
+        castedData = data == null ? null : data.toString();
+        break;
+    }
+
+    setter.invoke(object, castedData);
+
+  }
 }

@@ -77,7 +77,5 @@ public class View<T extends Relation<?>> extends DatabaseObject {
     
     // V- validation
     @Override
-    protected void checkClassValidity() throws MissingAnnotationException {
-        return;
-    }
+    protected void checkClassValidity() throws MissingAnnotationException {}
 }

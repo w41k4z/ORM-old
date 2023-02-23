@@ -12,7 +12,7 @@ public abstract class PostgresConnection extends DatabaseConnection {
 
     @Override
     public String dateFormat(String date) {
-        return null;
+        return "'" + date + "'";
     }
 
     @Override

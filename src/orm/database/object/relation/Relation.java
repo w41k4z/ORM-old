@@ -135,6 +135,12 @@ public class Relation<T> extends DatabaseObject {
         return Integer.parseInt(request.executeRequest().toString());
     }
 
+    public int create(DatabaseConnection connection, String manualPK) throws Exception {
+        this.setPrimaryKey(manualPK);
+        Request request = new Request(CRUDOperator.INSERT, this, this.getClass(), connection);
+        return Integer.parseInt(request.executeRequest().toString());
+    }
+
     @SuppressWarnings("unchecked")
     public T[] findAll(DatabaseConnection connection) throws Exception {
         Request request = new Request(CRUDOperator.SELECT, this, this.getClass(), connection);

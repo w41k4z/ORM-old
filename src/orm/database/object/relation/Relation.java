@@ -31,7 +31,7 @@ public class Relation<T> extends DatabaseObject {
 
     // II- setters
     private void setPrimaryKey(String pk) throws IllegalAccessException, IllegalArgumentException,
-            InvocationTargetException, NoSuchMethodException, SecurityException {
+            InvocationTargetException, NoSuchMethodException, SecurityException, NoSuchFieldException {
         if (this.hasPrimaryKey())
             this.getPrimaryKeySetter().invoke(this, pk);
     }
@@ -57,49 +57,46 @@ public class Relation<T> extends DatabaseObject {
             Field pkField = this.getClass().getField(pk.getOriginalName());
             return pkField.getAnnotation(PrimaryKey.class).prefix();
         } catch (Exception e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
         return null;
     }
 
     private int getPrimaryKeyLength() {
-        for (Field field : this.getClass().getDeclaredFields()) {
-            if (field.isAnnotationPresent(PrimaryKey.class)) {
-                return field.getAnnotation(PrimaryKey.class).length();
-            }
+        ModelField pk = this.getPrimaryKeyField();
+        try {
+            Field pkField = this.getClass().getField(pk.getOriginalName());
+            return pkField.getAnnotation(PrimaryKey.class).length();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         return 0;
     }
 
     private String getPrimaryKeySequence() {
-        for (Field field : this.getClass().getDeclaredFields()) {
-            if (field.isAnnotationPresent(PrimaryKey.class)) {
-                return field.getAnnotation(PrimaryKey.class).sequence();
-            }
+        ModelField pk = this.getPrimaryKeyField();
+        try {
+            Field pkField = this.getClass().getField(pk.getOriginalName());
+            return pkField.getAnnotation(PrimaryKey.class).sequence();
+        } catch (Exception e) {
+            e.printStackTrace();
         }
         return null;
     }
 
-    private Method getPrimaryKeySetter() throws NoSuchMethodException, SecurityException {
-        for (Field field : this.getClass().getDeclaredFields()) {
-            if (field.isAnnotationPresent(PrimaryKey.class)) {
-                return this.getClass().getDeclaredMethod(Treatment.toCamelCase("set", field.getName()), String.class);
-            }
-        }
-        return null;
+    private Method getPrimaryKeySetter() throws NoSuchMethodException, SecurityException, NoSuchFieldException {
+        ModelField pk = this.getPrimaryKeyField();
+        Field pkField = this.getClass().getField(pk.getOriginalName());
+        return this.getClass().getDeclaredMethod(Treatment.toCamelCase("set", pkField.getName()),
+                pk.getClassType());
     }
 
     public String getPrimaryKey() throws IllegalAccessException, IllegalArgumentException, InvocationTargetException,
-            NoSuchMethodException, SecurityException {
-        for (Field field : this.getClass().getDeclaredFields()) {
-            if (field.isAnnotationPresent(PrimaryKey.class)) {
-                Object pk = this.getClass().getDeclaredMethod(Treatment.toCamelCase("get", field.getName()))
-                        .invoke(this);
-                return pk == null ? null : pk.toString();
-            }
-        }
-        return null;
+            NoSuchMethodException, SecurityException, NoSuchFieldException {
+        ModelField pk = this.getPrimaryKeyField();
+        Field pkField = this.getClass().getField(pk.getOriginalName());
+        Method getter = this.getClass().getDeclaredMethod(Treatment.toCamelCase("get", pkField.getName()));
+        return getter.invoke(this) == null ? null : getter.invoke(this).toString();
     }
 
     //// column

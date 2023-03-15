@@ -89,7 +89,8 @@ public class Request {
 
         for (int i = 0; i < columnName.length; i++) {
             Object data = this.getDatabaseObject().getClass()
-                    .getMethod(Treatment.toCamelCase("get", columnName[i].getOriginalName())).invoke(this.getDatabaseObject());
+                    .getMethod(Treatment.toCamelCase("get", columnName[i].getOriginalName()))
+                    .invoke(this.getDatabaseObject());
             String toInsert;
             switch (data.getClass().getSimpleName()) {
                 case "String":
@@ -115,16 +116,17 @@ public class Request {
     }
 
     ////// SELECT request
-    private String buildSelectRequest() throws Exception { 
-        switch(this.getDatabaseObject().getClass().getSimpleName()) {
+    private String buildSelectRequest() throws Exception {
+        switch (this.getDatabaseObject().getClass().getSimpleName()) {
             case "Function":
                 return this.getConnection().functionGetter(
-                this.getDatabaseObject()
-                        .getTarget());
+                        this.getDatabaseObject()
+                                .getTarget());
 
             default:
                 Object returnType = this.getType().getConstructor().newInstance();
-                ModelField[] columnField = (ModelField[]) returnType.getClass().getMethod("getColumn").invoke(returnType);
+                ModelField[] columnField = (ModelField[]) returnType.getClass().getMethod("getColumn")
+                        .invoke(returnType);
                 String[] columnName = new String[columnField.length];
                 int index = 0;
                 for (ModelField modelField : columnField) {

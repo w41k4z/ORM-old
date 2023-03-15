@@ -32,16 +32,33 @@ public class Relation<T> extends DatabaseObject {
     // II- setters
     private void setPrimaryKey(String pk) throws IllegalAccessException, IllegalArgumentException,
             InvocationTargetException, NoSuchMethodException, SecurityException {
-        if(this.hasPrimaryKey()) this.getPrimaryKeySetter().invoke(this, pk);
+        if (this.hasPrimaryKey())
+            this.getPrimaryKeySetter().invoke(this, pk);
     }
 
     // III- getters
     //// primaryKey
-    private String getPrimaryKeyPrefix() {
+    public ModelField getPrimaryKeyField() {
         for (Field field : this.getClass().getDeclaredFields()) {
             if (field.isAnnotationPresent(PrimaryKey.class)) {
-                return field.getAnnotation(PrimaryKey.class).prefix();
+                String name = field.getAnnotation(PrimaryKey.class).column().name().length() > 0
+                        ? field.getAnnotation(PrimaryKey.class).column().name()
+                        : field.getName();
+                String originalName = field.getName();
+                return new ModelField(field.getType(), name, originalName);
             }
+        }
+        return null;
+    }
+
+    private String getPrimaryKeyPrefix() {
+        ModelField pk = this.getPrimaryKeyField();
+        try {
+            Field pkField = this.getClass().getField(pk.getOriginalName());
+            return pkField.getAnnotation(PrimaryKey.class).prefix();
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
         }
         return null;
     }
@@ -73,19 +90,6 @@ public class Relation<T> extends DatabaseObject {
         return null;
     }
 
-    public ModelField getPrimaryKeyField() {
-        for (Field field : this.getClass().getDeclaredFields()) {
-            if (field.isAnnotationPresent(PrimaryKey.class)) {
-                String name = field.getAnnotation(PrimaryKey.class).column().name().length() > 0
-                        ? field.getAnnotation(PrimaryKey.class).column().name()
-                        : field.getName();
-                String originalName = field.getName();
-                return new ModelField(field.getType(), name, originalName);
-            }
-        }
-        return null;
-    }
-
     public String getPrimaryKey() throws IllegalAccessException, IllegalArgumentException, InvocationTargetException,
             NoSuchMethodException, SecurityException {
         for (Field field : this.getClass().getDeclaredFields()) {
@@ -107,7 +111,8 @@ public class Relation<T> extends DatabaseObject {
     public ModelField[] getColumn() {
         ModelField[] columns = new ModelField[this.getColumnCount()];
         int index = 0;
-        if(this.hasPrimaryKey()) columns[index++] = this.getPrimaryKeyField();
+        if (this.hasPrimaryKey())
+            columns[index++] = this.getPrimaryKeyField();
         for (Field field : this.getClass().getDeclaredFields()) {
             if (field.isAnnotationPresent(Column.class)) {
                 String name = field.getAnnotation(Column.class).name().length() > 0
@@ -129,16 +134,36 @@ public class Relation<T> extends DatabaseObject {
     }
 
     // IV- CRUD
-    public int create(DatabaseConnection connection) throws Exception {
-        this.setPrimaryKey(this.createPrimaryKey(connection));
-        Request request = new Request(CRUDOperator.INSERT, this, this.getClass(), connection);
-        return Integer.parseInt(request.executeRequest().toString());
-    }
-
     public int create(DatabaseConnection connection, String manualPK) throws Exception {
         this.setPrimaryKey(manualPK);
         Request request = new Request(CRUDOperator.INSERT, this, this.getClass(), connection);
         return Integer.parseInt(request.executeRequest().toString());
+    }
+
+    /*
+     * For model with generated primary key
+     */
+    public int create(DatabaseConnection connection) throws Exception {
+        return this.create(connection, this.createPrimaryKey(connection));
+    }
+
+    @SuppressWarnings("unchecked")
+    public T findByPrimaryKey(DatabaseConnection connection, String primaryKey) throws Exception {
+        if (this.hasPrimaryKey()) {
+            Request request = new Request(CRUDOperator.SELECT, this, this.getClass(), connection);
+            request.setSpecification("WHERE " + this.getPrimaryKeyField().getName() + " = '" + primaryKey + "'");
+            ArrayList<Object> result = (ArrayList<Object>) request.executeRequest();
+            T ans = (T) Relation.class.cast(result.get(0));
+            return ans;
+        }
+        return null;
+    }
+
+    public T findByPrimaryKey(DatabaseConnection connection) throws Exception {
+        if (this.hasPrimaryKey() && this.getPrimaryKey() != null) {
+            return this.findByPrimaryKey(connection, this.getPrimaryKey());
+        }
+        return null;
     }
 
     @SuppressWarnings("unchecked")
@@ -191,7 +216,7 @@ public class Relation<T> extends DatabaseObject {
     // V- method
     private String createPrimaryKey(DatabaseConnection connection) throws Exception {
         if (!this.hasCustomizedPrimaryKey()) // case for mysql auto_increment
-            return connection instanceof PostgresConnection ? "DEFAULT" : "NULL";   // or for postgres serial
+            return connection instanceof PostgresConnection ? "DEFAULT" : "NULL"; // or for postgres serial
         String primaryKey = this.getPrimaryKeyPrefix();
         int sequence = new Sequence(this.getPrimaryKeySequence()).get(connection);
         int limit = this.getPrimaryKeyLength() -
@@ -208,7 +233,7 @@ public class Relation<T> extends DatabaseObject {
     }
 
     private boolean hasCustomizedPrimaryKey() {
-        return this.getPrimaryKeyPrefix().length() > 0;
+        return this.hasPrimaryKey() && this.getPrimaryKeyPrefix().length() > 0;
     }
 
     // VII- validation

@@ -236,7 +236,7 @@ public class Relation<T> extends DatabaseObject {
     // VII- validation
     private void checkTableAnnotation() throws MissingAnnotationException {
         if (!this.getClass().isAnnotationPresent(Table.class))
-            throw new MissingAnnotationException();
+            throw new MissingAnnotationException(this);
     }
 
     private void checkColumnValidity() throws InvalidColumnCountException {
@@ -247,7 +247,7 @@ public class Relation<T> extends DatabaseObject {
             }
         }
         if (this.getColumnCount() != count)
-            throw new InvalidColumnCountException();
+            throw new InvalidColumnCountException(this);
     }
 
     private void checkPrimaryKeyValidity() throws PrimaryKeyCountException {
@@ -258,7 +258,7 @@ public class Relation<T> extends DatabaseObject {
             }
         }
         if (count > 1)
-            throw new PrimaryKeyCountException();
+            throw new PrimaryKeyCountException(this);
     }
 
     protected void checkClassValidity()

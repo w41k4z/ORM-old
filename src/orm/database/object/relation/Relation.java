@@ -104,6 +104,16 @@ public class Relation<T> extends DatabaseObject {
         return this.getClass().getAnnotation(Table.class).columnCount();
     }
 
+    public ModelField getColumn(String columnName) {
+        ModelField[] columns = this.getColumn();
+        for (int i = 0; i < columns.length; i++) {
+            if (columns[i].getOriginalName().toLowerCase().equals(columnName.toLowerCase())) {
+                return columns[i];
+            }
+        }
+        return null;
+    }
+
     @Override
     public ModelField[] getColumn() {
         ModelField[] columns = new ModelField[this.getColumnCount()];

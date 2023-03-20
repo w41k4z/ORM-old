@@ -54,7 +54,7 @@ public class Relation<T> extends DatabaseObject {
     private String getPrimaryKeyPrefix() {
         ModelField pk = this.getPrimaryKeyField();
         try {
-            Field pkField = this.getClass().getField(pk.getOriginalName());
+            Field pkField = this.getClass().getDeclaredField(pk.getOriginalName());
             return pkField.getAnnotation(PrimaryKey.class).prefix();
         } catch (Exception e) {
             e.printStackTrace();
@@ -65,7 +65,7 @@ public class Relation<T> extends DatabaseObject {
     private int getPrimaryKeyLength() {
         ModelField pk = this.getPrimaryKeyField();
         try {
-            Field pkField = this.getClass().getField(pk.getOriginalName());
+            Field pkField = this.getClass().getDeclaredField(pk.getOriginalName());
             return pkField.getAnnotation(PrimaryKey.class).length();
         } catch (Exception e) {
             e.printStackTrace();
@@ -76,7 +76,7 @@ public class Relation<T> extends DatabaseObject {
     private String getPrimaryKeySequence() {
         ModelField pk = this.getPrimaryKeyField();
         try {
-            Field pkField = this.getClass().getField(pk.getOriginalName());
+            Field pkField = this.getClass().getDeclaredField(pk.getOriginalName());
             return pkField.getAnnotation(PrimaryKey.class).sequence();
         } catch (Exception e) {
             e.printStackTrace();
@@ -86,7 +86,7 @@ public class Relation<T> extends DatabaseObject {
 
     private Method getPrimaryKeySetter() throws NoSuchMethodException, SecurityException, NoSuchFieldException {
         ModelField pk = this.getPrimaryKeyField();
-        Field pkField = this.getClass().getField(pk.getOriginalName());
+        Field pkField = this.getClass().getDeclaredField(pk.getOriginalName());
         return this.getClass().getDeclaredMethod(Treatment.toCamelCase("set", pkField.getName()),
                 pk.getClassType());
     }
@@ -94,7 +94,7 @@ public class Relation<T> extends DatabaseObject {
     public String getPrimaryKey() throws IllegalAccessException, IllegalArgumentException, InvocationTargetException,
             NoSuchMethodException, SecurityException, NoSuchFieldException {
         ModelField pk = this.getPrimaryKeyField();
-        Field pkField = this.getClass().getField(pk.getOriginalName());
+        Field pkField = this.getClass().getDeclaredField(pk.getOriginalName());
         Method getter = this.getClass().getDeclaredMethod(Treatment.toCamelCase("get", pkField.getName()));
         return getter.invoke(this) == null ? null : getter.invoke(this).toString();
     }

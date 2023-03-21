@@ -92,6 +92,11 @@ public class Request {
                     .getMethod(Treatment.toCamelCase("get", columnName[i].getOriginalName()))
                     .invoke(this.getDatabaseObject());
             String toInsert;
+            if (data == null) {
+                toInsert = "NULL";
+                req = i == 0 ? req.concat(toInsert) : req.concat(", " + toInsert);
+                continue;
+            }
             switch (data.getClass().getSimpleName()) {
                 case "String":
                     toInsert = data == null ? "NULL" : "'" + data.toString() + "'";

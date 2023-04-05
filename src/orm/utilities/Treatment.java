@@ -50,30 +50,34 @@ public class Treatment {
     Method setter = object.getClass().getMethod(toCamelCase("set", modelField.getOriginalName()),
         modelField.getClassType());
 
-    switch (modelField.getClassType().getSimpleName()) {
-      case "Date":
-        castedData = data == null ? null : convertToSqlDate(data.toString());
-        break;
+    if (data == null || data.toString().trim().length() == 0 || data.toString().trim().toLowerCase().equals("null")) {
+      castedData = null;
+    } else {
+      switch (modelField.getClassType().getSimpleName()) {
+        case "Date":
+          castedData = convertToSqlDate(data.toString().trim());
+          break;
 
-      case "Timestamp":
-        castedData = data == null ? null : Timestamp.valueOf(data.toString());
-        break;
+        case "Timestamp":
+          castedData = Timestamp.valueOf(data.toString().trim());
+          break;
 
-      case "Time":
-        castedData = data == null ? null : Time.valueOf(data.toString());
-        break;
+        case "Time":
+          castedData = Time.valueOf(data.toString().trim());
+          break;
 
-      case "Integer":
-        castedData = data == null ? null : Integer.parseInt(data.toString());
-        break;
+        case "Integer":
+          castedData = Integer.parseInt(data.toString().trim());
+          break;
 
-      case "Double":
-        castedData = data == null ? null : Double.parseDouble(data.toString());
-        break;
+        case "Double":
+          castedData = Double.parseDouble(data.toString().trim());
+          break;
 
-      default:
-        castedData = data == null ? null : data.toString();
-        break;
+        default:
+          castedData = data.toString().trim();
+          break;
+      }
     }
 
     setter.invoke(object, castedData);

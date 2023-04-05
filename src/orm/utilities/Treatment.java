@@ -45,32 +45,32 @@ public class Treatment {
   }
 
   public static void setObjectFieldValue(Object object, Object data, ModelField modelField) throws Exception {
-    
+
     Object castedData;
     Method setter = object.getClass().getMethod(toCamelCase("set", modelField.getOriginalName()),
         modelField.getClassType());
 
     switch (modelField.getClassType().getSimpleName()) {
       case "Date":
-        castedData = data == null ? null : Date.valueOf(data.toString());
+        castedData = data == null ? null : convertToSqlDate(data.toString());
         break;
-      
+
       case "Timestamp":
         castedData = data == null ? null : Timestamp.valueOf(data.toString());
         break;
-      
+
       case "Time":
         castedData = data == null ? null : Time.valueOf(data.toString());
         break;
-      
+
       case "Integer":
         castedData = data == null ? null : Integer.parseInt(data.toString());
         break;
-      
+
       case "Double":
         castedData = data == null ? null : Double.parseDouble(data.toString());
         break;
-      
+
       default:
         castedData = data == null ? null : data.toString();
         break;
@@ -78,5 +78,22 @@ public class Treatment {
 
     setter.invoke(object, castedData);
 
+  }
+
+  public static Date convertToSqlDate(String date) throws Exception {
+    try {
+      return Date.valueOf(date);
+    } catch (IllegalArgumentException e) {
+      try {
+        java.text.SimpleDateFormat sourceFormat = new java.text.SimpleDateFormat("dd/MM/yy");
+        java.util.Date utilDate = sourceFormat.parse(date);
+        java.text.SimpleDateFormat targetFormat = new java.text.SimpleDateFormat("yyyy-MM-dd");
+        String formattedDate = targetFormat.format(utilDate);
+        return java.sql.Date.valueOf(formattedDate);
+      } catch (IllegalArgumentException e2) {
+        throw new Exception("DateFormatException: " + date
+            + " is not a valid date format.\n\nValid format : [dd/MM/yy], [yyyy-MM-dd]");
+      }
+    }
   }
 }

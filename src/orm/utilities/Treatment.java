@@ -67,11 +67,11 @@ public class Treatment {
           break;
 
         case "Integer":
-          castedData = Integer.parseInt(data.toString().trim());
+          castedData = Integer.parseInt(data.toString().trim().replace(",", ""));
           break;
 
         case "Double":
-          castedData = Double.parseDouble(data.toString().trim());
+          castedData = Double.parseDouble(data.toString().trim().replace(",", ""));
           break;
 
         default:

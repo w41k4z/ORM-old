@@ -18,9 +18,9 @@ public class View<T extends Relation<?>> extends DatabaseObject {
     private Class<T> type;
 
     // I- constructors
-    public View(String viewName, Class<T> returnType) throws Exception {
+    public View(String viewName, Class<T> type) throws Exception {
         this.setViewName(viewName);
-        this.setType(returnType);
+        this.setType(type);
     }
 
     // II- setter
@@ -28,8 +28,8 @@ public class View<T extends Relation<?>> extends DatabaseObject {
         this.viewName = viewName;
     }
 
-    private void setType(Class<T> returnType) {
-        this.type = returnType;
+    private void setType(Class<T> type) {
+        this.type = type;
     }
 
     // III- getter
@@ -40,15 +40,17 @@ public class View<T extends Relation<?>> extends DatabaseObject {
     public Class<T> getType() {
         return this.type;
     }
-    
+
     @Override
     public String getTarget() {
         return this.getViewName();
     }
 
     @Override
-    public ModelField[] getColumn() throws IllegalAccessException, InvocationTargetException, NoSuchMethodException, SecurityException, InstantiationException, IllegalArgumentException {
-        return (ModelField[]) this.getType().getMethod("getColumn").invoke(this.getType().getConstructor().newInstance());
+    public ModelField[] getColumn() throws IllegalAccessException, InvocationTargetException, NoSuchMethodException,
+            SecurityException, InstantiationException, IllegalArgumentException {
+        return (ModelField[]) this.getType().getMethod("getColumn")
+                .invoke(this.getType().getConstructor().newInstance());
     }
 
     // IV- fetch
@@ -74,8 +76,9 @@ public class View<T extends Relation<?>> extends DatabaseObject {
         }
         return ans;
     }
-    
+
     // V- validation
     @Override
-    protected void checkClassValidity() throws MissingAnnotationException {}
+    protected void checkClassValidity() throws MissingAnnotationException {
+    }
 }

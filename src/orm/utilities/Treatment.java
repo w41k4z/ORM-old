@@ -7,6 +7,8 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 
 import orm.database.object.relation.ModelField;
+import orm.database.object.type.Point;
+import orm.database.object.type.Polygon;
 
 public class Treatment {
 
@@ -63,7 +65,11 @@ public class Treatment {
           break;
 
         case "Time":
-          castedData = Time.valueOf(data.toString().trim());
+          try {
+            castedData = Time.valueOf(data.toString().trim());
+          } catch (Exception e) {
+            castedData = Time.valueOf(data.toString().trim().split("\\.")[0]);
+          }
           break;
 
         case "Integer":
@@ -72,6 +78,14 @@ public class Treatment {
 
         case "Double":
           castedData = Double.parseDouble(data.toString().trim().replace(",", ""));
+          break;
+
+        case "Polygon":
+          castedData = Polygon.valueOf(data.toString());
+          break;
+
+        case "Point":
+          castedData = Point.valueOf(data.toString());
           break;
 
         default:
@@ -99,5 +113,14 @@ public class Treatment {
             + " is not a valid date format.\n\nValid format : [dd/MM/yy], [yyyy-MM-dd]");
       }
     }
+  }
+
+  public static boolean isArray(Object array, int dimension, Class<?> type) {
+    Class<?> objectClass = array.getClass();
+    while (dimension > 1 && objectClass.isArray()) {
+      objectClass = objectClass.getComponentType();
+      dimension--;
+    }
+    return objectClass.isArray() && objectClass.getComponentType().equals(type);
   }
 }

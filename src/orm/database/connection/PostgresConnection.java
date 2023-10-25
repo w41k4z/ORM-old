@@ -2,9 +2,12 @@ package orm.database.connection;
 
 import java.sql.SQLException;
 
+import orm.database.object.type.Geometry;
+
 public abstract class PostgresConnection extends DatabaseConnection {
 
-    public PostgresConnection(){}
+    public PostgresConnection() {
+    }
 
     public PostgresConnection(String url, String user, String password) throws SQLException {
         super(url, user, password);
@@ -29,5 +32,24 @@ public abstract class PostgresConnection extends DatabaseConnection {
     public String functionGetter(String function) {
         return "SELECT * FROM " + function;
     }
-    
+
+    @Override
+    public String geometryParser() {
+        return "ST_AsText";
+    }
+
+    @Override
+    public String geometryAreaMethod() {
+        return "ST_Area";
+    }
+
+    @Override
+    public String geometryIntersectMethod() {
+        return "ST_Intersects";
+    }
+
+    @Override
+    public String geometryFormat(Geometry geometry) {
+        return this.geometryParser() + "('" + geometry.getStringValue() + "')";
+    }
 }

@@ -8,7 +8,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 
 import orm.annotation.Column;
-import orm.annotation.Table;
+import orm.annotation.Entity;
 import orm.annotation.PrimaryKey;
 import orm.database.connection.DatabaseConnection;
 import orm.database.connection.PostgresConnection;
@@ -101,7 +101,7 @@ public class Relation<T> extends DatabaseObject {
 
     //// column
     private int getColumnCount() {
-        return this.getClass().getAnnotation(Table.class).columnCount();
+        return this.getClass().getAnnotation(Entity.class).columnCount();
     }
 
     public ModelField getColumn(String columnName) {
@@ -135,8 +135,8 @@ public class Relation<T> extends DatabaseObject {
     //// target name
     @Override
     public String getTarget() {
-        return this.getClass().getAnnotation(Table.class).name().length() > 0
-                ? this.getClass().getAnnotation(Table.class).name()
+        return this.getClass().getAnnotation(Entity.class).name().length() > 0
+                ? this.getClass().getAnnotation(Entity.class).name()
                 : this.getClass().getSimpleName();
     }
 
@@ -245,7 +245,7 @@ public class Relation<T> extends DatabaseObject {
 
     // VII- validation
     private void checkTableAnnotation() throws MissingAnnotationException {
-        if (!this.getClass().isAnnotationPresent(Table.class))
+        if (!this.getClass().isAnnotationPresent(Entity.class))
             throw new MissingAnnotationException(this);
     }
 

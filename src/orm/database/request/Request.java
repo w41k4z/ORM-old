@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import orm.database.connection.DatabaseConnection;
 import orm.database.object.DatabaseObject;
 import orm.database.object.relation.Relation;
+import orm.database.object.type.Geometry;
 import orm.enumeration.CRUDOperator;
 import orm.exception.InvalidRequestException;
 import orm.database.object.relation.ModelField;
@@ -95,26 +96,29 @@ public class Request {
             if (data == null) {
                 toInsert = "NULL";
                 req = i == 0 ? req.concat(toInsert) : req.concat(", " + toInsert);
-                continue;
+            } else {
+                if (Geometry.class.isAssignableFrom(data.getClass())) {
+                    toInsert = this.getConnection().geometryFormat(((Geometry) data));
+                }
+                switch (data.getClass().getSimpleName()) {
+                    case "String":
+                        toInsert = "'" + data.toString() + "'";
+                        break;
+                    case "Time":
+                        toInsert = "'" + data.toString() + "'";
+                        break;
+                    case "Date":
+                        toInsert = this.getConnection().dateFormat(data.toString());
+                        break;
+                    case "Timestamp":
+                        toInsert = this.getConnection().timeStampFormat(data.toString());
+                        break;
+                    default:
+                        toInsert = data.toString();
+                        break;
+                }
+                req = i == 0 ? req.concat(toInsert) : req.concat(", " + toInsert);
             }
-            switch (data.getClass().getSimpleName()) {
-                case "String":
-                    toInsert = data == null ? "NULL" : "'" + data.toString() + "'";
-                    break;
-                case "Time":
-                    toInsert = data == null ? "NULL" : "'" + data.toString() + "'";
-                    break;
-                case "Date":
-                    toInsert = data == null ? "NULL" : this.getConnection().dateFormat(data.toString());
-                    break;
-                case "Timestamp":
-                    toInsert = data == null ? "NULL" : this.getConnection().timeStampFormat(data.toString());
-                    break;
-                default:
-                    toInsert = data == null ? "NULL" : data.toString();
-                    break;
-            }
-            req = i == 0 ? req.concat(toInsert) : req.concat(", " + toInsert);
         }
 
         return req.concat(")");
@@ -135,7 +139,11 @@ public class Request {
                 String[] columnName = new String[columnField.length];
                 int index = 0;
                 for (ModelField modelField : columnField) {
-                    columnName[index++] = modelField.getName();
+                    if (Geometry.class.isAssignableFrom(modelField.getClassType())) {
+                        columnName[index++] = this.getConnection().geometryParser() + "(" + modelField.getName() + ") AS " + modelField.getName();
+                    } else {
+                        columnName[index++] = modelField.getName();
+                    }
                 }
                 return this.getCrudOperator() + " ".concat(String.join(",", columnName).concat(
                         " FROM ".concat(
@@ -155,30 +163,33 @@ public class Request {
                             columnName[i].getOriginalName()))
                     .invoke(this.getDatabaseObject());
 
-            if (data == null || columnName[i].getName().equals(table.getPrimaryKeyField().getName()))
-                continue;
-
-            req = req.concat(index == 0 ? "" : ", ");
-            String toInsert;
-            switch (data.getClass().getSimpleName()) {
-                case "String":
-                    toInsert = "'" + data.toString() + "'";
-                    break;
-                case "Time":
-                    toInsert = "'" + data.toString() + "'";
-                    break;
-                case "Date":
-                    toInsert = this.getConnection().dateFormat(data.toString());
-                    break;
-                case "Timestamp":
-                    toInsert = this.getConnection().timeStampFormat(data.toString());
-                    break;
-                default:
-                    toInsert = data.toString();
-                    break;
+            if (data != null && !columnName[i].getName().equals(table.getPrimaryKeyField().getName())) {
+                req = req.concat(index == 0 ? "" : ", ");
+                String toInsert;
+                if (Geometry.class.isAssignableFrom(data.getClass())) {
+                    toInsert = this.getConnection().geometryFormat(((Geometry) data));
+                } else {
+                    switch (data.getClass().getSimpleName()) {
+                        case "String":
+                            toInsert = "'" + data.toString() + "'";
+                            break;
+                        case "Time":
+                            toInsert = "'" + data.toString() + "'";
+                            break;
+                        case "Date":
+                            toInsert = this.getConnection().dateFormat(data.toString());
+                            break;
+                        case "Timestamp":
+                            toInsert = this.getConnection().timeStampFormat(data.toString());
+                            break;
+                        default:
+                            toInsert = data.toString();
+                            break;
+                    }
+                }
+                req = req.concat(columnName[i].getName() + "=" + toInsert);
+                index++;
             }
-            req = req.concat(columnName[i].getName() + "=" + toInsert);
-            index++;
         }
 
         return req.concat(" " + this.getSpecification());
